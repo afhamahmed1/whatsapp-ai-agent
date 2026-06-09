@@ -13,6 +13,7 @@ This is the kind of build clients ask for under names like "WhatsApp chatbot wit
 
 ## Features
 - WhatsApp Cloud API integration: webhook verification, message receiving, and sending.
+- Webhook signature verification (`X-Hub-Signature-256`), so only Meta can deliver messages to your endpoint.
 - Grounded answers from a small knowledge base you control (`data/knowledge-base.md`).
 - Tool-calling: `capture_lead` and `request_human`, easy to extend.
 - Human handoff with a per-conversation flag, so the bot stops auto-replying once a person steps in.
@@ -52,6 +53,7 @@ and use the same Verify Token you put in `.env`. Subscribe to the `messages` fie
 | `WHATSAPP_VERIFY_TOKEN` | (none) | The string you set in the Meta webhook setup. |
 | `WHATSAPP_ACCESS_TOKEN` | (none) | Token used to send messages. |
 | `WHATSAPP_PHONE_NUMBER_ID` | (none) | Your WhatsApp phone number ID. |
+| `WHATSAPP_APP_SECRET` | (none) | App secret (Meta dashboard → App settings → Basic). Verifies the `X-Hub-Signature-256` header on incoming webhooks. If unset, verification is skipped with a warning — dev only. |
 | `GRAPH_API_VERSION` | `v21.0` | Meta Graph API version. |
 | `HUMAN_HANDOFF_NUMBER` | (none) | Optional. A number to notify on handoff (E.164, no +). |
 | `PORT` | `3000` | HTTP port. |
@@ -74,6 +76,7 @@ src/
     ├── whatsapp.module.ts
     ├── whatsapp.controller.ts   # GET verify, POST receive
     ├── whatsapp.service.ts      # send messages via the Cloud API
+    ├── signature.guard.ts       # X-Hub-Signature-256 verification
     ├── agent.service.ts         # LLM reply, tools, handoff
     ├── llm.service.ts           # OpenAI wrapper
     ├── conversation.store.ts    # per-number history and handoff flag
@@ -85,10 +88,10 @@ test/   agent.service.spec.ts
 ## Production notes
 - Process webhooks on a queue. Meta retries if you are slow, which can cause double replies.
 - Move the conversation store to Redis or a database. The in-memory map resets on restart and does not scale across instances.
-- Verify the `X-Hub-Signature-256` header on incoming requests for real deployments.
+- Set `WHATSAPP_APP_SECRET` so signature verification is enforced. Requests that fail the check get a 403.
 
 ## Roadmap
-- [ ] Signature verification middleware
+- [x] Signature verification (`X-Hub-Signature-256` guard with timing-safe compare)
 - [ ] Redis-backed conversation store
 - [ ] Retrieval for large knowledge bases
 - [ ] Quick-reply buttons and templates
