@@ -1,8 +1,19 @@
-import { Body, Controller, Get, HttpCode, Logger, Post, Query, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Logger,
+  Post,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { AgentService } from './agent.service';
 import { WhatsappService } from './whatsapp.service';
+import { WebhookSignatureGuard } from './signature.guard';
 import { extractTextMessages, IncomingText, WhatsappWebhookBody } from './webhook.types';
 
 @Controller('webhooks/whatsapp')
@@ -35,6 +46,7 @@ export class WhatsappController {
   // then process in the background.
   @Post()
   @HttpCode(200)
+  @UseGuards(WebhookSignatureGuard)
   receive(@Body() body: WhatsappWebhookBody): { status: string } {
     const messages = extractTextMessages(body);
     void this.process(messages);
